@@ -1,0 +1,1 @@
+export const CATEGORY_TYPES = ['transport', 'food', 'energy', 'digital']

@@ -1,0 +1,52 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
+@import 'tailwindcss';
+
+@layer base {
+  :root {
+    --dark-gray: #2B2C37;
+    --medium-gray: #828FA3;
+  }
+
+  body{
+    color: var(--medium-gray);
+  }
+
+  h1 {
+    color: var(--dark-gray);
+    @apply text-2xl font-bold lg:text-4xl mb-4 lg:mb-6;
+  }
+
+  h2 {
+    color: var(--dark-gray);
+    @apply text-4xl opacity-70 m-2;
+  }
+
+  h3 {
+    color: var(--dark-gray);
+    @apply text-lg opacity-70 m-2;
+  }
+
+  h4 {
+    color: var(--dark-gray);
+    @apply opacity-70 m-2;
+  }
+
+  .form-wrapper {
+    @apply flex flex-col items-center gap-2 shadow-lg border-t-green-500 border-t-4 w-[20rem] rounded-sm p-8
+  }
+
+  .center-form{
+    @apply flex items-center justify-center h-[calc(100vh-8rem)]
+  }
+
+  .green-btn {
+    @apply bg-green-500 text-white w-fit mt-2 px-4 rounded-sm capitalize py-1 hover:bg-green-600 hover:cursor-pointer disabled:cursor-not-allowed disabled:bg-green-400
+  }
+
+  .outlet {
+    @apply bg-white shadow-xl p-4 rounded
+  }
+}
+

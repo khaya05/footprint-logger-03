@@ -1,0 +1,19 @@
+{
+  "name": "footprint-logger-02",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "setup-project": "cd client && npm i && cd ../server && npm i",
+    "client": "cd client && npm run dev",
+    "server": "cd server && npm run dev",
+    "dev": "concurrently --kill-others-on-fail \"npm run server\" \"npm run client\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "concurrently": "^8.0.1",
+    "dayjs": "^1.11.7"
+  }
+}
