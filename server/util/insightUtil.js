@@ -1,105 +1,128 @@
 import Activity from "../models/activityModel.js";
-import User from "../models/userModel.js";
+import Goal from "../models/goalModel.js";
+import { getWeeklyGoalForUser } from "./goalUtil.js";
+import { calculateStats } from "./statsUtil.js";
+import { io } from "../server.js";
 
 const tips = {
-  transportation: [
+  transport: [
     "Try cycling twice this week instead of driving — save about 2kg CO₂.",
-    "Use public transport once to cut your emissions."
+    "Use public transport once to cut your emissions.",
+    "Combine errands into one trip to reduce driving.",
+    "Try walking for trips under 1km this week."
   ],
   food: [
     "Replace one meat meal with a veggie meal — save ~1.5kg CO₂.",
-    "Eat local produce this week to reduce transport emissions."
+    "Eat local produce this week to reduce transport emissions.",
+    "Try meal planning to reduce food waste.",
+    "Choose seasonal vegetables for lower carbon footprint."
   ],
   energy: [
     "Turn off lights for an hour a day — small habits add up.",
-    "Unplug devices when not in use to cut phantom energy."
+    "Unplug devices when not in use to cut phantom energy.",
+    "Lower your thermostat by 1°C this week.",
+    "Air dry clothes instead of using the dryer twice this week."
   ],
   digital: [
     "Stream in standard definition once this week — save data & CO₂.",
-    "Clean up unused files in the cloud to lower server impact."
+    "Clean up unused files in the cloud to lower server impact.",
+    "Reduce video calls by 30 minutes this week.",
+    "Delete old photos and videos from cloud storage."
   ]
 };
 
-function getRandomTip(category) {
+export const getRandomTip = (category) => {
   const categoryTips = tips[category];
-  if (!categoryTips) {
-    return "Focus on reducing your environmental impact this week!";
-  }
+  if (!categoryTips) return "Focus on reducing your environmental impact this week!";
   return categoryTips[Math.floor(Math.random() * categoryTips.length)];
 }
 
+function getWeekBoundaries(date = new Date()) {
+  const startOfWeek = new Date(date);
+  const dayOfWeek = startOfWeek.getDay(); //
+  startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+  return { startOfWeek, endOfWeek };
+}
+
 export async function analyzeUserEmissions(userId) {
-  try {
-    const startOfWeek = new Date();
-    const dayOfWeek = startOfWeek.getDay();
-    startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
-    startOfWeek.setHours(0, 0, 0, 0)
+  const { startOfWeek, endOfWeek } = getWeekBoundaries();
 
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 7);
+  const activities = await Activity.find({
+    createdBy: userId,
+    date: { $gte: startOfWeek, $lt: endOfWeek },
+  });
 
-    const activities = await Activity.find({
-      createdBy: userId,
-      date: { $gte: startOfWeek, $lt: endOfWeek },
-    });
+  if (activities.length === 0) {
+    return {
+      message: "No activities logged this week. Add an activity to get tips!",
+      totalEmissions: 0,
+    };
+  }
 
-    if (!activities || activities.length === 0) {
-      return {
-        message: "No activity logged this week. Try adding a new activity!",
-        weekStart: startOfWeek,
-        weekEnd: endOfWeek
-      };
-    }
+  const totals = {};
+  activities.forEach((a) => {
+    totals[a.category] = (totals[a.category] || 0) + (a.emissions || 0);
+  });
 
-    const totals = {};
-    activities.forEach(activity => {
-      const category = activity.category;
-      const emissions = activity.emissions || 0;
-      totals[category] = (totals[category] || 0) + emissions;
-    });
+  const [highestCategory, categoryEmissions] =
+    Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
+  k
+  let goal = await Goal.findOne({
+    user: userId,
+    weekStart: startOfWeek,
+  });
 
-    const totalEntries = Object.entries(totals);
-    if (totalEntries.length === 0) {
-      return {
-        message: "No emissions data found for this week.",
-        weekStart: startOfWeek,
-        weekEnd: endOfWeek
-      };
-    }
-
-    const highestCategory = totalEntries.sort((a, b) => b[1] - a[1])[0];
-    const [category, totalEmissions] = highestCategory;
-
-    const targetReduction = +(totalEmissions * 0.1).toFixed(2);
-    const tip = getRandomTip(category);
-
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
-    }
-
-    const goal = {
+  if (!goal) {
+    goal = new Goal({
+      user: userId,
+      category: highestCategory,
       weekStart: startOfWeek,
       weekEnd: endOfWeek,
-      category,
-      totalEmissions,
-      targetReduction,
+      totalEmissions: +categoryEmissions.toFixed(2),
+      targetReduction: +(categoryEmissions * 0.15).toFixed(2),
       achievedReduction: 0,
-      tip,
-      createdAt: new Date()
-    };
-
-    if (!user.weeklyGoals) {
-      user.weeklyGoals = [];
-    }
-
-    user.weeklyGoals.push(goal);
-    await user.save();
-
-    return goal;
-
-  } catch (error) {
-    console.error('Error in analyzeUserEmissions:', error);
-    throw new Error(`Failed to analyze user emissions: ${error.message}`);
+      tip: getRandomTip(highestCategory),
+      status: "pending",
+    });
+    await goal.save();
   }
+
+  return {
+    goal,
+    totals,
+    totalEmissions: Object.values(totals).reduce((s, v) => s + v, 0),
+    message: `Your focus this week: reduce emissions from ${highestCategory}`,
+  };
+}
+
+export async function updateGoalProgress(goalId, userId) {
+  const { startOfWeek, endOfWeek } = getWeekBoundaries();
+
+  const goal = await Goal.findOne({ _id: goalId, user: userId });
+  if (!goal) return null;
+
+  if (!(goal instanceof Goal)) {
+    goal = new Goal(goal);
+  }
+
+  await goal.calculateAchievedReduction();
+
+  return { goal, progress: goal.calculateProgress() };
+}
+
+export const updateUserInsights = async (userId, io) => {
+  const stats = await calculateStats(userId);
+  const goalData = await getWeeklyGoalForUser(userId);
+
+  io.to(userId).emit("statsUpdate", stats);
+  if (goalData) io.to(userId).emit("goalUpdate", goalData);
+
+  io.emit("leaderboardUpdate", { message: "Leaderboard will be dynamic soon." });
+
+  return { stats, goalData };
 }

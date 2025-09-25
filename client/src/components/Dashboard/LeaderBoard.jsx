@@ -1,7 +1,7 @@
 import Card from './Card';
 import CardContent from './CardContent';
 
-const LeaderBoard = () => {
+const LeaderBoard = ({ leaderboard }) => {
   const fakeLeaderboard = [
     { id: 1, name: 'Alice', avg: 22 },
     { id: 2, name: 'Bob', avg: 25 },

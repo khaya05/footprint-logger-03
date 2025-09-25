@@ -1,20 +1,22 @@
+import mongoose from 'mongoose';
+import Activity from '../models/activityModel.js';
 import { StatusCodes } from 'http-status-codes';
 import { NotFoundError } from '../errors/customErrors.js';
-import Activity from '../models/activityModel.js'
 import { asyncWrapper } from '../util/asyncWrapper.js';
-import mongoose from 'mongoose';
+import { getEmissionsTotalForDays } from '../util/activityUtil.js';
+import { updateGoalProgress, updateUserInsights } from '../util/insightUtil.js';
+import { getOrCreateWeeklyGoal } from '../util/goalUtil.js';
+import Goal from '../models/goalModel.js';
 
 export const getAllActivities = asyncWrapper(async (req, res) => {
   const { search, category, sort } = req.query;
 
-  const queryObj = {
-    createdBy: req.user.userId
-  };
+  const queryObj = { createdBy: req.user.userId };
 
   if (search) {
     queryObj.$or = [
       { activity: { $regex: search, $options: 'i' } },
-      { notes: { $regex: search, $options: 'i' } }
+      { notes: { $regex: search, $options: 'i' } },
     ];
   }
 
@@ -27,7 +29,7 @@ export const getAllActivities = asyncWrapper(async (req, res) => {
     oldest: 'date',
     highest: '-emissions',
     lowest: 'emissions',
-    'a-z': 'activity',        
+    'a-z': 'activity',
     'z-a': '-activity',
   };
 
@@ -38,7 +40,7 @@ export const getAllActivities = asyncWrapper(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const activities = await Activity.find(queryObj)
-    .select('-createdBy -updatedAt -__v') 
+    .select('-createdBy -updatedAt -__v')
     .sort(sortKey)
     .skip(skip)
     .limit(limit);
@@ -47,24 +49,35 @@ export const getAllActivities = asyncWrapper(async (req, res) => {
   const pages = Math.ceil(totalActivities / limit);
 
   res.status(StatusCodes.OK).json({
-    totalActivities, 
-    pages, 
+    totalActivities,
+    pages,
     currentPage: page,
-    activities 
+    activities,
   });
 });
 
 export const getActivity = asyncWrapper(async (req, res) => {
   const { id } = req.params;
-  const activity = await Activity.findById(id).select('-createdAt -updatedAt -createdBy -_v')
+  const activity = await Activity.findById(id).select(
+    '-createdAt -updatedAt -createdBy -_v'
+  );
 
-  if (!activity) throw new NotFoundError(`no activity with id: ${id}`)
-  res.status(StatusCodes.OK).json({ activity })
-})
+  if (!activity) throw new NotFoundError(`no activity with id: ${id}`);
+  res.status(StatusCodes.OK).json({ activity });
+});
 
 export const createActivity = asyncWrapper(async (req, res) => {
-  req.body.createdBy = req.user.userId
+  const { userId } = req.user
+  req.body.createdBy = userId
   const activity = await Activity.create(req.body)
+
+  await getOrCreateWeeklyGoal(userId, activity.category, activity.emissions)
+
+  // const currentGoal = await Goal.findOne({
+  //   user: userId,
+  //   status: { $in: ['accepted', 'customized'] }
+  // }).sort({ createdAt: -1 })
+
   res.status(StatusCodes.CREATED).json({ activity })
 })
 
@@ -82,38 +95,17 @@ export const deleteActivity = asyncWrapper(async (req, res) => {
 
   if (!activity) if (!activity) throw new NotFoundError(`no activity with id: ${id}`)
 
+  const remainingActivities = await Activity.find({ user: id })
+
+  if (remainingActivities.length === 0) {
+    await Goal.findOneAndUpdate(
+      { user: req.user._id, status: { $in: ['pending', 'accepted', 'customized'] } },
+      { status: 'dismissed' }
+    );
+  }
+
   res.status(StatusCodes.OK).json({ msg: 'Activity deleted successfully' });
 });
-
-// userStats
-const getEmissionsTotalForDays = async (days, userId) => {
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-
-  const userObjectId = mongoose.Types.ObjectId.isValid(userId)
-    ? new mongoose.Types.ObjectId(userId)
-    : userId;
-
-  const result = await Activity.aggregate([
-    {
-      $match: {
-        createdBy: userObjectId,
-        date: { $gte: startDate }
-      }
-    },
-    {
-      $group: {
-        _id: null,
-        totalEmissions: { $sum: "$emissions" },
-        count: { $sum: 1 },
-        avgEmission: { $avg: "$emissions" }
-      }
-    }
-  ]);
-
-  return result[0] || { totalEmissions: 0, count: 0 };
-};
-
 
 export const getActivitiesStats = asyncWrapper(async (req, res) => {
   const userId = new mongoose.Types.ObjectId(String(req.user.userId));
@@ -125,22 +117,22 @@ export const getActivitiesStats = asyncWrapper(async (req, res) => {
           {
             $group: {
               _id: null,
-              totalEmissions: { $sum: "$emissions" },
+              totalEmissions: { $sum: '$emissions' },
               noOfActivities: { $sum: 1 },
-              avgEmission: { $avg: "$emissions" },
+              avgEmission: { $avg: '$emissions' },
             },
           },
         ],
         communityStats: [
           {
             $group: {
-              _id: null, 
-              communityAvg: { $avg: "$emissions" }
-            }
-          }
-        ]
-      }
-    }
+              _id: null,
+              communityAvg: { $avg: '$emissions' },
+            },
+          },
+        ],
+      },
+    },
   ]);
 
   const userStats = aggregationResult.userStats[0] || {
@@ -151,8 +143,8 @@ export const getActivitiesStats = asyncWrapper(async (req, res) => {
 
   const communityAvg = aggregationResult.communityStats[0]?.communityAvg || 0;
 
-  const weeklySummary = await getEmissionsTotalForDays(7, userId)
-  const monthlySummary = await getEmissionsTotalForDays(30, userId)
+  const weeklySummary = await getEmissionsTotalForDays(7, userId);
+  const monthlySummary = await getEmissionsTotalForDays(30, userId);
 
   res.status(StatusCodes.OK).json({
     userStats,
@@ -161,4 +153,3 @@ export const getActivitiesStats = asyncWrapper(async (req, res) => {
     communityAvg,
   });
 });
-

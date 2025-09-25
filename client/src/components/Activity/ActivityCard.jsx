@@ -34,7 +34,6 @@ const ActivityCard = ({ activity }) => {
   const handleDeleteActivity = (id) => {
     setShowConfirmDelete(true);
     setDeleteId(id);
-    console.log('hey');
   };
 
   return (

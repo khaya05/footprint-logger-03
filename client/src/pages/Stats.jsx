@@ -3,8 +3,12 @@ import {
   BarGraph,
   LeaderBoard,
   NoActivities,
+  PersonalizedTips,
   RecentActivities,
   SummaryCard,
+  TipCard,
+  WeeklyGoal,
+  WeeklyInsights,
 } from '../components';
 import { FiTrendingUp, FiUsers, FiCalendar } from 'react-icons/fi';
 import { FaLeaf } from 'react-icons/fa';
@@ -21,18 +25,24 @@ export const dashboardLoaderStats = async () => {
   try {
     const { data: stats } = await customFetch('/activities/stats');
     const { data: recent } = await customFetch('/activities?sort=newest');
-    return { stats, recent };
+    const { data: goalData } = await customFetch('/goals/weekly');
+    return { stats, recent, goalData };
   } catch (error) {
     toastService.error(error?.response?.data?.msg || 'Failed to fetch data.');
     return { error: error?.response?.data?.msg };
   }
 };
 
+// achievedReduction
+
 const Dashboard = () => {
-  const { stats, recent } = useLoaderData();
+  const { stats, recent, goalData } = useLoaderData();
   const { user: currentUser } = useDashboardContext();
 
-  const dailyTotals = recent.activities.reduce((acc, curr) => {
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [goal, setGoal] = useState(goalData?.goal || null);
+
+  const dailyTotals = recent?.activities.reduce((acc, curr) => {
     const day = dayjs(curr.date).format('YYYY-MM-DD');
     acc[day] = (acc[day] || 0) + curr.emissions;
     return acc;
@@ -45,20 +55,70 @@ const Dashboard = () => {
     }))
     .slice(0, 7);
 
-  const [goal, setGoal] = useState(null);
+  // useEffect(() => {
+  //   const fetchGoal = async () => {
+  //     try {
+  //       const res = await customFetch('/goals/weekly');
+  //       const data = await res.json();
+  //       setGoal(data);
+  //     } catch (err) {
+  //       console.error('Error fetching goal:', err);
+  //     }
+  //   };
+
+  //   fetchGoal();
+  // }, []);
+
+  console.log(goalData);
+
   useEffect(() => {
-    socket.on('goal:update', (data) => {
-      if (data.user === currentUser._id) {
+    if (!currentUser) return;
+
+    socket.on('goalUpdate', (data) => {
+      if (data.goal && data.user === currentUser._id) {
         setGoal(data.goal);
+        toastService.success(data.message || 'Goal updated!');
       }
     });
 
-    return () => socket.off('goal:update');
+    socket.on('goalCompleted', (data) => {
+      if (data.user === currentUser._id) {
+        setGoal(null);
+        toastService.success(data.message || 'Goal Completed! 🎊');
+      }
+    });
+
+    socket.on('goalDismissed', (data) => {
+      if (data.user === currentUser._id) {
+        setGoal(null);
+        toastService.error(data.message || 'Goal dismissed');
+      }
+    });
+
+    socket.on('newWeeklyGoal', (data) => {
+      if (data.user === currentUser._id) {
+        setGoal(data.goal);
+        toastService.success(data.message || 'New goal generated!');
+      }
+    });
+
+    socket.on('leaderboardUpdate', (data) => {
+      setLeaderboard(data.leaderboard);
+    });
+
+    return () => {
+      socket.off('goalUpdate');
+      socket.off('goalCompleted');
+      socket.off('goalDismissed');
+      socket.off('newWeeklyGoal');
+      socket.off('leaderboardUpdate');
+    };
   }, [currentUser]);
 
   if (recent?.activities.length > 0) {
     return (
       <div className='space-y-6'>
+        {goalData.tip && <TipCard goal={goalData} onAccepted={setGoal} />}
         <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
           <SummaryCard
             value={stats.userStats.totalEmissions}
@@ -99,8 +159,14 @@ const Dashboard = () => {
 
         <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
           <BarGraph data={chartData} />
-          <LeaderBoard />
+          <LeaderBoard data={leaderboard} />
         </div>
+
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 w-full'>
+          <WeeklyGoal goal={goalData} />
+          <WeeklyInsights stats={stats} />
+        </div>
+        {/* <PersonalizedTips  /> */}
         <RecentActivities recent={recent} />
       </div>
     );
