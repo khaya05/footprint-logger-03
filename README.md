@@ -1,18 +1,18 @@
-# 🌍 EcoTrack -- Footprint Logger App
+# EcoTrack -- Footprint Logger App
 
 EcoTrack is a fullstack carbon footprint logger that allows users to
 track, visualize, and compare their daily activities' CO₂ emissions.
 
 ------------------------------------------------------------------------
 
-## 🚀 Getting Started
+## Getting Started
 
 Follow these steps to run the project locally:
 
 ### 1. Clone the repository
 
 ``` bash
-git clone https://github.com/khaya05/footprint-logger-02.git
+git clone https://github.com/khaya05/footprint-logger-03.git
 cd footprint-logger-02
 ```
 
@@ -43,11 +43,11 @@ variables:
     JWT_SECRET=secret
     JWT_EXPIRES_IN=1d
 
-👉 For testing purposes, here is a ready-made mongo url `MONGO_URL=mongodb+srv://khaya05:Qn0NbKa0TfM3J3fX@cluster0.jjunxd4.mongodb.net/FOOTPRINT_LOGGER?retryWrites=true&w=majority&appName=Cluster0`.
+For testing purposes, here is a ready-made mongo url `MONGO_URL=mongodb+srv://khaya05:Qn0NbKa0TfM3J3fX@cluster0.jjunxd4.mongodb.net/FOOTPRINT_LOGGER_02?retryWrites=true&w=majority&appName=Cluster0`.
 
 ------------------------------------------------------------------------
 
-## 🔑 Test Accounts
+## Test Accounts
 
 Two users are available for quick testing:
 
@@ -63,7 +63,7 @@ Two users are available for quick testing:
     { "email": "sally@email.com", "password": "pass1234" }
     ```
 
-⚠️ Please **do not change** the profile details (name or email) of the
+Please **do not change** the profile details (name or email) of the
 test accounts.
 
 You are encouraged to **create your own account** to explore the
@@ -71,7 +71,7 @@ registration and logging flow.
 
 ------------------------------------------------------------------------
 
-## ▶️ Running the Application
+## Running the Application
 
 From the root of the project:
 
@@ -84,7 +84,7 @@ Vite) concurrently.
 
 ------------------------------------------------------------------------
 
-## 📌 Notes for Testers
+## Notes for Testers
 
 -   Use the provided test accounts to explore dashboards with preloaded
     data.\
