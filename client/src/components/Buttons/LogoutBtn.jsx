@@ -5,9 +5,10 @@ import { toastService } from '../../util/toastUtil';
 const LogoutBtn = () => {
   const navigate = useNavigate();
   const handleLogout = async () => {
-    navigate('/login');
     await customFetch('/auth/logout');
+    localStorage.removeItem('token');
     toastService.success('Logged out!');
+    navigate('/login');
   };
 
   return (

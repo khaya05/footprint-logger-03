@@ -9,7 +9,21 @@ export const register = asyncWrapper(async (req, res) => {
   const hashedPassword = await hashPassword(req.body.password);
   req.body.password = hashedPassword;
   const user = await User.create(req.body);
-  res.status(StatusCodes.CREATED).json({ user });
+
+  const token = createToken({ userId: user._id, role: user.role });
+
+  const oneDay = 1000 * 60 * 60 * 24;
+  res.cookie('token', token, {
+    httpOnly: true,
+    expires: new Date(Date.now() + oneDay),
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  });
+
+  res.status(StatusCodes.CREATED).json({
+    user,
+    token
+  });
 });
 
 export const login = asyncWrapper(async (req, res, next) => {
@@ -21,15 +35,25 @@ export const login = asyncWrapper(async (req, res, next) => {
   if (!isValidUser) throw new UnauthenticatedError('invalid credentials');
 
   const token = createToken({ userId: user._id, role: user.role });
-  const oneDay = 1000 * 60 * 60 * 24;
 
+  const oneDay = 1000 * 60 * 60 * 24;
   res.cookie('token', token, {
     httpOnly: true,
     expires: new Date(Date.now() + oneDay),
     secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   });
 
-  res.status(StatusCodes.OK).json({ msg: 'user logged in' });
+  res.status(StatusCodes.OK).json({
+    msg: 'user logged in',
+    token,
+    user: {
+      userId: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    }
+  });
 });
 
 export const logout = (req, res) => {

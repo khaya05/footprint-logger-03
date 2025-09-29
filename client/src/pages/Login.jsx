@@ -8,7 +8,9 @@ export const LoginAction = async ({ request }) => {
   const data = Object.fromEntries(formData);
 
   try {
-    await customFetch.post('/auth/login', data);
+    const response = await customFetch.post('/auth/login', data);
+    localStorage.setItem('token', response?.data?.token);
+
     toastService.success('Logged in successfully');
     return redirect('/dashboard');
   } catch (error) {

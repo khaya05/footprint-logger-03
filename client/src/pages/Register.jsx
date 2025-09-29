@@ -14,7 +14,9 @@ export const registerAction = async ({ request }) => {
   }
 
   try {
-    await customFetch.post('/auth/register', data);
+     const response = await customFetch.post('/auth/register', data);
+     localStorage.setItem('token', response.data.token);
+     
     toastService.success('Registration successful! Please login');
     return redirect('/login');
   } catch (error) {
