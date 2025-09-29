@@ -15,6 +15,7 @@ import authRouter from './routes/authRouter.js';
 import activityRouter from './routes/activityRouter.js';
 import goalRouter from './routes/goalRouter.js';
 import errorHandlerMiddleware from './middleware/errorHandlerMiddleware.js';
+import leaderboardRouter from './routes/leaderboardRouter.js'
 import { authenticateUser } from './middleware/authMiddleware.js';
 import { BadRequestError, UnauthenticatedError } from './errors/customErrors.js';
 import { verifyJWT } from './util/tokenUtils.js';
@@ -105,6 +106,7 @@ app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', authenticateUser, userRouter);
 app.use('/api/v1/activities', authenticateUser, activityRouter);
 app.use('/api/v1/goals', authenticateUser, goalRouter);
+app.use('/api/v1/leaderboard', authenticateUser, leaderboardRouter);
 
 app.use('*', (req, res) => {
   res.status(404).json({ msg: 'Route not found' });

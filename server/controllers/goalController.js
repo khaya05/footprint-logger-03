@@ -11,7 +11,6 @@ import {
   isReadyForGoals,
   createWeeklyGoal,
   calculateBaseline,
-  getUserGoalHistory
 } from "../services/goalService.js";
 
 export const getWeeklyGoal = asyncWrapper(async (req, res) => {
@@ -51,7 +50,7 @@ export const createGoal = asyncWrapper(async (req, res) => {
 
     if (!baseline.hasData) {
       throw new BadRequestError(
-        `No activity data found for ${category}. Add some activities first to create a goal.`
+        `Can't create goal! No activity data found for ${category}.`
       );
     }
 
@@ -132,18 +131,6 @@ export const updateUserGoalProgress = asyncWrapper(async (req, res) => {
   });
 });
 
-export const getGoalHistory = asyncWrapper(async (req, res) => {
-  const userId = req.user.userId;
-  const limit = parseInt(req.query.limit) || 10;
-
-  const history = await getUserGoalHistory(userId, limit);
-
-  res.status(StatusCodes.OK).json({
-    success: true,
-    goals: history,
-    count: history.length
-  });
-});
 
 export const customizeGoal = asyncWrapper(async (req, res) => {
   const { id } = req.params;

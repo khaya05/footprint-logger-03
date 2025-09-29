@@ -6,7 +6,6 @@ import { TIPS } from "./constants.js";
 
 export const getRandomTip = (category) => {
   const categoryTips = TIPS[category];
-  if (!categoryTips) return "Focus on reducing your environmental impact this week!";
   return categoryTips[Math.floor(Math.random() * categoryTips.length)];
 }
 

@@ -4,8 +4,6 @@ import { StatusCodes } from 'http-status-codes';
 import { NotFoundError } from '../errors/customErrors.js';
 import { asyncWrapper } from '../util/asyncWrapper.js';
 import { getEmissionsTotalForDays } from '../util/activityUtil.js';
-import { updateGoalProgress, updateUserInsights } from '../util/insightUtil.js';
-import { getOrCreateWeeklyGoal } from '../util/goalUtil.js';
 import Goal from '../models/goalModel.js';
 import { generateTwoSuggestions, getCurrentWeekGoal, isReadyForGoals } from '../services/goalService.js';
 

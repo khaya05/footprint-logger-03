@@ -1,6 +1,5 @@
 import { StatusCodes } from "http-status-codes";
 import { asyncWrapper } from "../util/asyncWrapper.js";
-import { analyzeUserEmissions } from "../util/insightUtil.js";
 import Goal from '../models/goalModel.js'
 import Activity from '../models/activityModel.js'
 

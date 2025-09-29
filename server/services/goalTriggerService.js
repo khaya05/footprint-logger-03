@@ -90,7 +90,7 @@ function checkActivitiesRequired(data) {
       shouldTrigger: true,
       type: 'activity_threshold',
       priority: 'medium',
-      message: `Great job logging ${data.activitiesCount} activities! Ready to set your first challenge?`,
+      message: `Great job logging ${data.activitiesCount} activities!?`,
       context: 'sufficient_data'
     };
   }

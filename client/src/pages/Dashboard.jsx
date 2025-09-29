@@ -3,13 +3,12 @@ import {
   BarGraph,
   LeaderBoard,
   NoActivities,
-  PersonalizedTips,
   RecentActivities,
   SummaryCard,
-  TipCard,
   ActiveGoal,
   WeeklyInsights,
   GoalSuggestions,
+  LogProgress,
 } from '../components';
 import { FiTrendingUp, FiUsers, FiCalendar } from 'react-icons/fi';
 import { FaLeaf } from 'react-icons/fa';
@@ -17,16 +16,13 @@ import customFetch from '../util/customFetch';
 import { toastService } from '../util/toastUtil';
 import { useLoaderData } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { useEffect } from 'react';
-import socket from '../util/socket';
-import { useDashboardContext } from './DashboardLayout';
 import { useState } from 'react';
 
 export const dashboardLoaderStats = async () => {
   try {
     const { data: stats } = await customFetch('/activities/stats');
     const { data: recent } = await customFetch('/activities?sort=newest');
-    const { data: goalData } = await customFetch('/goals/weekly');
+    const { data: goalData } = await customFetch('/goals');
 
     let goalSuggestions = null;
     if (!goalData?.goal) {
@@ -53,10 +49,7 @@ const Dashboard = () => {
     goalData,
     goalSuggestions: initialSuggestions,
   } = useLoaderData();
-  const { user: currentUser } = useDashboardContext();
-
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [goal, setGoal] = useState(goalData?.goal || null);
+  const [goal, setGoal] = useState(goalData || null);
   const [goalSuggestions, setGoalSuggestions] = useState(
     initialSuggestions?.suggestions || null
   );
@@ -70,81 +63,31 @@ const Dashboard = () => {
     return acc;
   }, {});
 
-  const chartData = Object.entries(dailyTotals)
-    .map(([date, total]) => ({
-      date,
-      emissions: total,
-    }))
-    .slice(0, 7);
+  const getWeeklyChartData = () => {
+    const days = [];
+    const today = new Date();
 
-  useEffect(() => {
-    if (!currentUser) return;
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = dayjs(date).format('YYYY-MM-DD');
 
-    socket.on('goalSuggestionsAvailable', (data) => {
-      if (data.userId === currentUser._id && data.suggestions) {
-        setGoalSuggestions(data.suggestions);
-        setGoalProgress(null);
-      }
-    });
+      days.push({
+        date: dayjs(date).format('MMM DD'),
+        emissions: dailyTotals[dateStr] || 0,
+      });
+    }
 
-    socket.on('goalProgressUpdate', (data) => {
-      if (data.userId === currentUser._id) {
-        setGoalProgress(data.progress);
-        setGoalSuggestions(null);
-      }
-    });
+    return days;
+  };
 
-    socket.on('goalUpdate', (data) => {
-      if (data.goal && data.user === currentUser._id) {
-        setGoal(data.goal);
-        setGoalSuggestions(null);
-        setGoalProgress(null);
-        toastService.success(data.message || 'Goal updated!');
-      }
-    });
-
-    socket.on('goalCompleted', (data) => {
-      if (data.user === currentUser._id) {
-        setGoal(null);
-        toastService.success(data.message || 'Goal Completed! 🎊');
-      }
-    });
-
-    socket.on('goalDismissed', (data) => {
-      if (data.user === currentUser._id) {
-        setGoal(null);
-        toastService.error(data.message || 'Goal dismissed');
-      }
-    });
-
-    socket.on('newWeeklyGoal', (data) => {
-      if (data.user === currentUser._id) {
-        setGoal(data.goal);
-        toastService.success(data.message || 'New goal generated!');
-      }
-    });
-
-    socket.on('leaderboardUpdate', (data) => {
-      setLeaderboard(data.leaderboard);
-    });
-
-    return () => {
-      socket.off('goalSuggestionsAvailable');
-      socket.off('goalProgressUpdate');
-      socket.off('goalUpdate');
-      socket.off('goalCompleted');
-      socket.off('goalDismissed');
-      socket.off('newWeeklyGoal');
-      socket.off('leaderboardUpdate');
-    };
-  }, [currentUser]);
+  const chartData = getWeeklyChartData();
 
   const handleGoalAccepted = (acceptedGoal) => {
-    console.log('Goal accepted:', acceptedGoal);
     setGoal(acceptedGoal);
     setGoalSuggestions(null);
     setGoalProgress(null);
-    toastService.success('Goal accepted! Start tracking your progress!');
+    toastService.success('Goal accepted!');
   };
 
   const handleSuggestionsDismiss = () => {
@@ -168,6 +111,7 @@ const Dashboard = () => {
 
   const handleCompleteGoal = async (goalId) => {
     try {
+      // eslint-disable-next-line no-unused-vars
       const { data } = await customFetch.patch(`/goals/${goalId}/complete`);
       setGoal(null);
       toastService.success('Congratulations! Goal completed! 🎉');
@@ -178,13 +122,12 @@ const Dashboard = () => {
     }
   };
 
-  console.log('Current goal state:', goal);
-  console.log('Goal progress:', goalProgress);
+  console.log({ goalData, goalSuggestions });
 
   if (recent?.activities.length > 0) {
     return (
       <div className='space-y-6'>
-        {goalSuggestions && !goal && (
+        {goalSuggestions && !goalData?.goal && (
           <GoalSuggestions
             suggestions={goalSuggestions}
             onGoalAccepted={handleGoalAccepted}
@@ -192,47 +135,9 @@ const Dashboard = () => {
           />
         )}
 
-        {goalProgress && !goal && !goalSuggestions && (
-          <div className='p-4 bg-blue-50 border border-blue-200 rounded-xl'>
-            <div className='flex items-center gap-3'>
-              <div className='flex-shrink-0'>
-                <div className='w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center'>
-                  <span className='text-blue-600 text-sm font-semibold'>
-                    {Math.round(
-                      ((Math.min(goalProgress.activitiesCount / 5, 1) +
-                        Math.min(goalProgress.totalEmissions / 20, 1)) /
-                        2) *
-                        100
-                    )}
-                    %
-                  </span>
-                </div>
-              </div>
-              <div className='flex-1'>
-                <p className='text-blue-800 font-medium'>
-                  Keep logging! Need {5 - goalProgress.activitiesCount} more
-                  activities and {Math.ceil(20 - goalProgress.totalEmissions)}{' '}
-                  more kg CO₂ to unlock challenges.
-                </p>
-                <div className='mt-2 flex gap-4 text-sm text-blue-600'>
-                  <span>📊 {goalProgress.activitiesCount}/5 activities</span>
-                  <span>
-                    📈 {Math.round(goalProgress.totalEmissions * 10) / 10}/20 kg
-                    CO₂
-                  </span>
-                  {goalProgress.categoriesUsed && (
-                    <span>🏷️ {goalProgress.categoriesUsed} categories</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+        {goalProgress && !goalData?.goal && !goalSuggestions && (
+          <LogProgress goalProgress={goalProgress} />
         )}
-
-        {/* Show existing tip card for pending goals (from loader) */}
-        {/* {goalData?.tip && !goal && (
-          <TipCard goal={goalData} onAccepted={setGoal} />
-        )} */}
 
         <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
           <SummaryCard
@@ -274,7 +179,7 @@ const Dashboard = () => {
 
         <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
           <BarGraph data={chartData} />
-          <LeaderBoard data={leaderboard} />
+          <LeaderBoard />
         </div>
 
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6 w-full'>

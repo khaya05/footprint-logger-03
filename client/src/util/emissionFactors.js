@@ -134,3 +134,13 @@ export const SORT_OPTIONS = [
   { value: 'highest', label: 'HIGH_EMISSIONS' },
   { value: 'lowest', label: 'LOW_EMISSIONS' },
 ];
+
+export const getCategoryEmoji = (category) => {
+  const emojis = {
+    transport: '🚗',
+    energy: '⚡',
+    food: '🥗',
+    digital: '💻',
+  };
+  return emojis[category] || '🎯';
+};

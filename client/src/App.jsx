@@ -9,7 +9,7 @@ import {
   Login,
   Profile,
   Register,
-  Stats,
+  Dashboard,
 } from './pages';
 import { registerAction } from './pages/Register';
 import { store } from './store';
@@ -21,7 +21,7 @@ import { dashboardLoader } from './pages/DashboardLayout';
 import { updateProfileAction, updateProfileLoader } from './pages/Profile';
 import { activitiesLoader } from './pages/AllActivities';
 import { editActivityLoader } from './pages/EditActivity';
-import { dashboardLoaderStats } from './pages/Stats';
+import { dashboardLoaderStats } from './pages/Dashboard';
 
 const router = createBrowserRouter([
   {
@@ -49,7 +49,7 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Stats />,
+            element: <Dashboard />,
             loader: dashboardLoaderStats,
           },
           {

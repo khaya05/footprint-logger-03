@@ -8,8 +8,7 @@ import {
   completeGoal,
   createGoal,
   getGoalSuggestions,
-  updateUserGoalProgress,
-  getGoalHistory,  
+  updateUserGoalProgress, 
   // regenerateGoal,
 } from "../controllers/goalController.js";
 
@@ -19,7 +18,6 @@ router.get("/", getGoal);
 router.post("/", createGoal);
 router.get("/suggestions", getGoalSuggestions);
 router.get("/weekly", getWeeklyGoal);
-router.get("/history", getGoalHistory);
 router.patch("/:id/accept", acceptGoal);
 router.patch("/:id/customize", customizeGoal);
 router.patch("/:id/complete", completeGoal);
