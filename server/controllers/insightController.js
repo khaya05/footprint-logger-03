@@ -61,8 +61,3 @@ export const getWeeklyInsight = asyncWrapper(async (req, res) => {
 
   res.status(StatusCodes.OK).json({ goal });
 })
-
-// export const getWeeklyInsight = asyncWrapper(async (req, res) =>{
-//   const goal = await analyzeUserEmissions(req.user.userId);
-//   res.status(StatusCodes.OK).json({ goal });
-// })

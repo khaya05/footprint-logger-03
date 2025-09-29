@@ -22,23 +22,6 @@ import { verifyJWT } from './util/tokenUtils.js';
 app.use(express.json());
 app.use(cookieParser());
 
-// routes
-app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/users', authenticateUser, userRouter);
-app.use('/api/v1/activities', authenticateUser, activityRouter);
-app.use('/api/v1/goals', authenticateUser, goalRouter);
-
-app.use('*', (req, res) => {
-  res.status(404).json({ msg: 'Route not found' });
-});
-
-// error handler
-app.use(errorHandlerMiddleware);
-
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-}
-
 const port = process.env.PORT || 5100;
 const server = http.createServer(app);
 
@@ -83,12 +66,36 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
   console.log('User connected', socket.id);
 
+  socket.join(socket.userId);
+
   socket.on('disconnect', () => {
     console.log('User disconnected', socket.id);
   });
 });
 
 app.set('io', io);
+
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+// routes
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/users', authenticateUser, userRouter);
+app.use('/api/v1/activities', authenticateUser, activityRouter);
+app.use('/api/v1/goals', authenticateUser, goalRouter);
+
+app.use('*', (req, res) => {
+  res.status(404).json({ msg: 'Route not found' });
+});
+
+// error handler
+app.use(errorHandlerMiddleware);
+
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
 
 try {
   await mongoose.connect(process.env.MONGO_URL);
@@ -99,5 +106,3 @@ try {
   console.error(error);
   process.exit(1);
 }
-
-export { io }

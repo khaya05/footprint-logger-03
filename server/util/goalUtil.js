@@ -1,7 +1,6 @@
 import Goal from '../models/goalModel.js'
 import Activity from '../models/activityModel.js'
 import dayjs from 'dayjs';
-import isoWeek from 'dayjs/plugin/isoWeek.js'
 import { getRandomTip } from './insightUtil.js';
 
 export const getWeeklyGoalForUser = async (userId) => {

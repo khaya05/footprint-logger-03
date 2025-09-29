@@ -2,44 +2,17 @@ import Activity from "../models/activityModel.js";
 import Goal from "../models/goalModel.js";
 import { getWeeklyGoalForUser } from "./goalUtil.js";
 import { calculateStats } from "./statsUtil.js";
-import { io } from "../server.js";
-
-const tips = {
-  transport: [
-    "Try cycling twice this week instead of driving — save about 2kg CO₂.",
-    "Use public transport once to cut your emissions.",
-    "Combine errands into one trip to reduce driving.",
-    "Try walking for trips under 1km this week."
-  ],
-  food: [
-    "Replace one meat meal with a veggie meal — save ~1.5kg CO₂.",
-    "Eat local produce this week to reduce transport emissions.",
-    "Try meal planning to reduce food waste.",
-    "Choose seasonal vegetables for lower carbon footprint."
-  ],
-  energy: [
-    "Turn off lights for an hour a day — small habits add up.",
-    "Unplug devices when not in use to cut phantom energy.",
-    "Lower your thermostat by 1°C this week.",
-    "Air dry clothes instead of using the dryer twice this week."
-  ],
-  digital: [
-    "Stream in standard definition once this week — save data & CO₂.",
-    "Clean up unused files in the cloud to lower server impact.",
-    "Reduce video calls by 30 minutes this week.",
-    "Delete old photos and videos from cloud storage."
-  ]
-};
+import { TIPS } from "./constants.js";
 
 export const getRandomTip = (category) => {
-  const categoryTips = tips[category];
+  const categoryTips = TIPS[category];
   if (!categoryTips) return "Focus on reducing your environmental impact this week!";
   return categoryTips[Math.floor(Math.random() * categoryTips.length)];
 }
 
-function getWeekBoundaries(date = new Date()) {
+export const getWeekBoundaries = (date = new Date()) => {
   const startOfWeek = new Date(date);
-  const dayOfWeek = startOfWeek.getDay(); //
+  const dayOfWeek = startOfWeek.getDay();
   startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
   startOfWeek.setHours(0, 0, 0, 0);
 

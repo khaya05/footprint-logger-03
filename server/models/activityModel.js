@@ -1,7 +1,6 @@
 import mongoose from 'mongoose'
 import { CATEGORY_TYPES } from '../util/constants.js'
 import { BadRequestError } from '../errors/customErrors.js'
-import { io } from '../server.js'
 
 const ActivitySchema = new mongoose.Schema(
   {

@@ -7,8 +7,9 @@ import {
   RecentActivities,
   SummaryCard,
   TipCard,
-  WeeklyGoal,
+  ActiveGoal,
   WeeklyInsights,
+  GoalSuggestions,
 } from '../components';
 import { FiTrendingUp, FiUsers, FiCalendar } from 'react-icons/fi';
 import { FaLeaf } from 'react-icons/fa';
@@ -26,21 +27,42 @@ export const dashboardLoaderStats = async () => {
     const { data: stats } = await customFetch('/activities/stats');
     const { data: recent } = await customFetch('/activities?sort=newest');
     const { data: goalData } = await customFetch('/goals/weekly');
-    return { stats, recent, goalData };
+
+    let goalSuggestions = null;
+    if (!goalData?.goal) {
+      try {
+        const { data: suggestions } = await customFetch('/goals/suggestions');
+        goalSuggestions = suggestions;
+      } catch (error) {
+        console.log('No goal suggestions available');
+        console.error(error);
+      }
+    }
+
+    return { stats, recent, goalData, goalSuggestions };
   } catch (error) {
     toastService.error(error?.response?.data?.msg || 'Failed to fetch data.');
     return { error: error?.response?.data?.msg };
   }
 };
 
-// achievedReduction
-
 const Dashboard = () => {
-  const { stats, recent, goalData } = useLoaderData();
+  const {
+    stats,
+    recent,
+    goalData,
+    goalSuggestions: initialSuggestions,
+  } = useLoaderData();
   const { user: currentUser } = useDashboardContext();
 
   const [leaderboard, setLeaderboard] = useState([]);
   const [goal, setGoal] = useState(goalData?.goal || null);
+  const [goalSuggestions, setGoalSuggestions] = useState(
+    initialSuggestions?.suggestions || null
+  );
+  const [goalProgress, setGoalProgress] = useState(
+    initialSuggestions?.progress || null
+  );
 
   const dailyTotals = recent?.activities.reduce((acc, curr) => {
     const day = dayjs(curr.date).format('YYYY-MM-DD');
@@ -55,28 +77,28 @@ const Dashboard = () => {
     }))
     .slice(0, 7);
 
-  // useEffect(() => {
-  //   const fetchGoal = async () => {
-  //     try {
-  //       const res = await customFetch('/goals/weekly');
-  //       const data = await res.json();
-  //       setGoal(data);
-  //     } catch (err) {
-  //       console.error('Error fetching goal:', err);
-  //     }
-  //   };
-
-  //   fetchGoal();
-  // }, []);
-
-  console.log(goalData);
-
   useEffect(() => {
     if (!currentUser) return;
+
+    socket.on('goalSuggestionsAvailable', (data) => {
+      if (data.userId === currentUser._id && data.suggestions) {
+        setGoalSuggestions(data.suggestions);
+        setGoalProgress(null);
+      }
+    });
+
+    socket.on('goalProgressUpdate', (data) => {
+      if (data.userId === currentUser._id) {
+        setGoalProgress(data.progress);
+        setGoalSuggestions(null);
+      }
+    });
 
     socket.on('goalUpdate', (data) => {
       if (data.goal && data.user === currentUser._id) {
         setGoal(data.goal);
+        setGoalSuggestions(null);
+        setGoalProgress(null);
         toastService.success(data.message || 'Goal updated!');
       }
     });
@@ -107,6 +129,8 @@ const Dashboard = () => {
     });
 
     return () => {
+      socket.off('goalSuggestionsAvailable');
+      socket.off('goalProgressUpdate');
       socket.off('goalUpdate');
       socket.off('goalCompleted');
       socket.off('goalDismissed');
@@ -115,10 +139,101 @@ const Dashboard = () => {
     };
   }, [currentUser]);
 
+  const handleGoalAccepted = (acceptedGoal) => {
+    console.log('Goal accepted:', acceptedGoal);
+    setGoal(acceptedGoal);
+    setGoalSuggestions(null);
+    setGoalProgress(null);
+    toastService.success('Goal accepted! Start tracking your progress!');
+  };
+
+  const handleSuggestionsDismiss = () => {
+    setGoalSuggestions(null);
+  };
+
+  const handleCustomizeGoal = async (goalId, customizations) => {
+    try {
+      const { data } = await customFetch.patch(
+        `/goals/${goalId}/customize`,
+        customizations
+      );
+      setGoal(data.goal);
+      toastService.success('Goal customized successfully!');
+    } catch (error) {
+      toastService.error(
+        error?.response?.data?.msg || 'Failed to customize goal'
+      );
+    }
+  };
+
+  const handleCompleteGoal = async (goalId) => {
+    try {
+      const { data } = await customFetch.patch(`/goals/${goalId}/complete`);
+      setGoal(null);
+      toastService.success('Congratulations! Goal completed! 🎉');
+    } catch (error) {
+      toastService.error(
+        error?.response?.data?.msg || 'Failed to complete goal'
+      );
+    }
+  };
+
+  console.log('Current goal state:', goal);
+  console.log('Goal progress:', goalProgress);
+
   if (recent?.activities.length > 0) {
     return (
       <div className='space-y-6'>
-        {goalData.tip && <TipCard goal={goalData} onAccepted={setGoal} />}
+        {goalSuggestions && !goal && (
+          <GoalSuggestions
+            suggestions={goalSuggestions}
+            onGoalAccepted={handleGoalAccepted}
+            onDismiss={handleSuggestionsDismiss}
+          />
+        )}
+
+        {goalProgress && !goal && !goalSuggestions && (
+          <div className='p-4 bg-blue-50 border border-blue-200 rounded-xl'>
+            <div className='flex items-center gap-3'>
+              <div className='flex-shrink-0'>
+                <div className='w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center'>
+                  <span className='text-blue-600 text-sm font-semibold'>
+                    {Math.round(
+                      ((Math.min(goalProgress.activitiesCount / 5, 1) +
+                        Math.min(goalProgress.totalEmissions / 20, 1)) /
+                        2) *
+                        100
+                    )}
+                    %
+                  </span>
+                </div>
+              </div>
+              <div className='flex-1'>
+                <p className='text-blue-800 font-medium'>
+                  Keep logging! Need {5 - goalProgress.activitiesCount} more
+                  activities and {Math.ceil(20 - goalProgress.totalEmissions)}{' '}
+                  more kg CO₂ to unlock challenges.
+                </p>
+                <div className='mt-2 flex gap-4 text-sm text-blue-600'>
+                  <span>📊 {goalProgress.activitiesCount}/5 activities</span>
+                  <span>
+                    📈 {Math.round(goalProgress.totalEmissions * 10) / 10}/20 kg
+                    CO₂
+                  </span>
+                  {goalProgress.categoriesUsed && (
+                    <span>🏷️ {goalProgress.categoriesUsed} categories</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show existing tip card for pending goals (from loader) */}
+        {/* {goalData?.tip && !goal && (
+          <TipCard goal={goalData} onAccepted={setGoal} />
+        )} */}
+
         <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
           <SummaryCard
             value={stats.userStats.totalEmissions}
@@ -163,10 +278,18 @@ const Dashboard = () => {
         </div>
 
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6 w-full'>
-          <WeeklyGoal goal={goalData} />
-          <WeeklyInsights stats={stats} />
+          <ActiveGoal
+            goal={goal || goalData}
+            onCustomize={handleCustomizeGoal}
+            onComplete={handleCompleteGoal}
+          />
+          <WeeklyInsights
+            stats={stats}
+            recent={recent}
+            goal={goal || goalData}
+          />
         </div>
-        {/* <PersonalizedTips  /> */}
+
         <RecentActivities recent={recent} />
       </div>
     );

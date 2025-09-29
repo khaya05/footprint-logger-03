@@ -7,6 +7,7 @@ import { getEmissionsTotalForDays } from '../util/activityUtil.js';
 import { updateGoalProgress, updateUserInsights } from '../util/insightUtil.js';
 import { getOrCreateWeeklyGoal } from '../util/goalUtil.js';
 import Goal from '../models/goalModel.js';
+import { generateTwoSuggestions, getCurrentWeekGoal, isReadyForGoals } from '../services/goalService.js';
 
 export const getAllActivities = asyncWrapper(async (req, res) => {
   const { search, category, sort } = req.query;
@@ -71,14 +72,63 @@ export const createActivity = asyncWrapper(async (req, res) => {
   req.body.createdBy = userId
   const activity = await Activity.create(req.body)
 
-  await getOrCreateWeeklyGoal(userId, activity.category, activity.emissions)
+  const response = {
+    activity
+  }
 
-  // const currentGoal = await Goal.findOne({
-  //   user: userId,
-  //   status: { $in: ['accepted', 'customized'] }
-  // }).sort({ createdAt: -1 })
+  const showSuggestions = await isReadyForGoals(req.user.userId);
 
-  res.status(StatusCodes.CREATED).json({ activity })
+  if (showSuggestions.ready) {
+    const existingGoal = await getCurrentWeekGoal(req.user.userId);
+
+    if (!existingGoal) {
+      const suggestions = await generateTwoSuggestions(req.user.userId);
+
+      if (suggestions.length > 0) {
+        response.goalSuggestions = {
+          message: "Lower your emissions with these suggestions:",
+          suggestions: suggestions,
+          showPrompt: true
+        };
+
+        req.io.to(req.user.userId).emit("goalSuggestionsAvailable", {
+          userId: req.user.userId,
+          suggestions: suggestions,
+          message: "Challenges unlocked!"
+        });
+      }
+    }
+  } else {
+    const needed = [];
+    if (!showSuggestions.reasons.activities) {
+      needed.push(`${5 - showSuggestions.stats.activitiesCount} more activities`);
+    }
+    if (!showSuggestions.reasons.emissions) {
+      needed.push(`${Math.ceil(20 - showSuggestions.stats.totalEmissions)} more kg CO2`);
+    }
+
+    if (needed.length > 0) {
+      const progressData = {
+        message: `Log ${needed.join(' and ')} more activities to unlock suggestions.`,
+        progress: {
+          activities: showSuggestions.stats.activitiesCount,
+          targetActivities: 5,
+          emissions: Math.round(showSuggestions.stats.totalEmissions * 10) / 10,
+          targetEmissions: 20
+        }
+      };
+
+      response.goalProgress = progressData;
+
+      req.io.to(req.user.userId).emit("goalProgressUpdate", {
+        userId: req.user.userId,
+        progress: progressData.progress,
+        message: progressData.message
+      });
+    }
+  }
+
+  res.status(StatusCodes.CREATED).json(response);
 })
 
 export const updateActivity = asyncWrapper(async (req, res) => {
