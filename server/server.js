@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import express from 'express';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
 const app = express();
 
 import userRouter from './routes/userRouter.js';
@@ -79,6 +80,25 @@ app.use((req, res, next) => {
   req.io = io;
   next();
 });
+
+// CORS
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://footprint-logger-03-frontend.onrender.com'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 
 // routes
 app.use('/api/v1/auth', authRouter);
