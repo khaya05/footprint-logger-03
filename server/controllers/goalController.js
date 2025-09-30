@@ -194,10 +194,8 @@ export const completeGoal = asyncWrapper(async (req, res) => {
 export const dismissGoal = asyncWrapper(async (req, res) => {
   const { id } = req.params;
 
-  const goal = await Goal.findOneAndUpdate(
-    { _id: id, user: req.user.userId },
-    { status: "dismissed" },
-    { new: true }
+  const goal = await Goal.findOneAndDelete(
+    { _id: id, user: req.user.userId }
   );
 
   if (!goal) throw new NotFoundError("Goal not found");

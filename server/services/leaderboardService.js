@@ -56,7 +56,6 @@ export const getUserRank = async (userId) => {
     {
       $match: {
         createdBy: userObjectId,
-        ...dateFilter
       }
     },
     {
@@ -72,9 +71,6 @@ export const getUserRank = async (userId) => {
   }
 
   const [rankData] = await Activity.aggregate([
-    {
-      $match: dateFilter
-    },
     {
       $group: {
         _id: '$createdBy',

@@ -32,13 +32,6 @@ const SuggestionCard = ({ suggestion, isRecommended, onAccept, loading }) => {
         onAccept={onAccept}
         loading={loading}
       />
-
-      {isRecommended && (
-        <div className='flex items-center gap-1 mt-3 text-xs text-green-600'>
-          <span>⭐</span>
-          <span>Recommended based on your highest emissions</span>
-        </div>
-      )}
     </div>
   );
 };

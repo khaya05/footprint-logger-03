@@ -122,6 +122,16 @@ const Dashboard = () => {
     }
   };
 
+  const handleCancel = async (goalId) => {
+    try {
+      await customFetch.delete(`/goals/${goalId}/dismiss`);
+    } catch (error) {
+      toastService.error(
+        error?.response?.data?.msg || 'Failed to delete goal'
+      );
+    }
+  };
+
   console.log({ goalData, goalSuggestions });
 
   if (recent?.activities.length > 0) {
@@ -187,6 +197,7 @@ const Dashboard = () => {
             goal={goal || goalData}
             onCustomize={handleCustomizeGoal}
             onComplete={handleCompleteGoal}
+            onCancel={handleCancel}
           />
           <WeeklyInsights
             stats={stats}

@@ -35,7 +35,7 @@ const GoalSchema = new mongoose.Schema({
   tip: String,
   status: {
     type: String,
-    enum: ['pending', 'accepted', 'customized', 'completed'],
+    enum: ['pending', 'accepted', 'customized', 'completed, dismissed'],
     default: 'pending',
   },
   createdAt: {

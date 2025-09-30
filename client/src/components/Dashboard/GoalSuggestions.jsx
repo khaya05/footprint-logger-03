@@ -37,7 +37,6 @@ const GoalSuggestions = ({ suggestions, onGoalAccepted, onDismiss }) => {
 
   const handleDismiss = () => {
     if (onDismiss) onDismiss();
-    toastService.success('You can create goals anytime from the goals page');
   };
 
   return (
@@ -46,8 +45,7 @@ const GoalSuggestions = ({ suggestions, onGoalAccepted, onDismiss }) => {
         <SuggestionHeader onDismiss={handleDismiss} />
 
         <p className='text-gray-600 mb-6'>
-          Great job logging your activities! Here are personalized Tips based on
-          your data:
+          Great job logging your activities! Here are personalized Tips based activities with highest emissions:
         </p>
 
         <div className='grid gap-4 md:grid-cols-2'>
