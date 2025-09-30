@@ -13,7 +13,7 @@ Follow these steps to run the project locally:
 
 ``` bash
 git clone https://github.com/khaya05/footprint-logger-03.git
-cd footprint-logger-02
+cd footprint-logger-03
 ```
 
 ### 2. Install dependencies
@@ -83,10 +83,3 @@ This will start both the server (Express + MongoDB) and client (React +
 Vite) concurrently.
 
 ------------------------------------------------------------------------
-
-## Notes for Testers
-
--   Use the provided test accounts to explore dashboards with preloaded
-    data.\
--   Try creating your own account and logging activities.\
--   Please avoid updating or deleting the provided test accounts.
