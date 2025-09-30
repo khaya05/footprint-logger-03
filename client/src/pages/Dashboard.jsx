@@ -49,6 +49,7 @@ const Dashboard = () => {
     goalData,
     goalSuggestions: initialSuggestions,
   } = useLoaderData();
+
   const [goal, setGoal] = useState(goalData || null);
   const [goalSuggestions, setGoalSuggestions] = useState(
     initialSuggestions?.suggestions || null
@@ -83,15 +84,16 @@ const Dashboard = () => {
 
   const chartData = getWeeklyChartData();
 
-  const handleGoalAccepted = (acceptedGoal) => {
-    setGoal(acceptedGoal);
+  const handleGoalAccepted = (acceptedGoalData) => {
+    setGoal(acceptedGoalData);
     setGoalSuggestions(null);
     setGoalProgress(null);
-    toastService.success('Goal accepted!');
+    toastService.success("Goal accepted");
   };
 
   const handleSuggestionsDismiss = () => {
     setGoalSuggestions(null);
+    toastService.success('Goal dismissed!');
   };
 
   const handleCustomizeGoal = async (goalId, customizations) => {
@@ -100,7 +102,8 @@ const Dashboard = () => {
         `/goals/${goalId}/customize`,
         customizations
       );
-      setGoal(data.goal);
+
+      setGoal(data);
       toastService.success('Goal customized successfully!');
     } catch (error) {
       toastService.error(
@@ -111,10 +114,14 @@ const Dashboard = () => {
 
   const handleCompleteGoal = async (goalId) => {
     try {
-      // eslint-disable-next-line no-unused-vars
       const { data } = await customFetch.patch(`/goals/${goalId}/complete`);
-      setGoal(null);
-      toastService.success('Congratulations! Goal completed! 🎉');
+
+      setGoal(data);
+      toastService.success('Goal completed! 🎉');
+
+      setTimeout(() => {
+        setGoal(null);
+      }, 2000);
     } catch (error) {
       toastService.error(
         error?.response?.data?.msg || 'Failed to complete goal'
@@ -122,22 +129,31 @@ const Dashboard = () => {
     }
   };
 
-  const handleCancel = async (goalId) => {
+  const handleDeleteGoal = async (goalId) => {
     try {
       await customFetch.delete(`/goals/${goalId}/dismiss`);
+
+      setGoal(null);
+      toastService.success('Goal deleted successfully');
+
+      try {
+        const { data: suggestions } = await customFetch('/goals/suggestions');
+        if (suggestions?.suggestions) {
+          setGoalSuggestions(suggestions.suggestions);
+          setGoalProgress(suggestions.progress);
+        }
+      } catch (error) {
+        console.error(error);
+      }
     } catch (error) {
-      toastService.error(
-        error?.response?.data?.msg || 'Failed to delete goal'
-      );
+      toastService.error(error?.response?.data?.msg || 'Failed to delete goal');
     }
   };
-
-  console.log({ goalData, goalSuggestions });
 
   if (recent?.activities.length > 0) {
     return (
       <div className='space-y-6'>
-        {goalSuggestions && !goalData?.goal && (
+        {goalSuggestions && !goal?.goal && (
           <GoalSuggestions
             suggestions={goalSuggestions}
             onGoalAccepted={handleGoalAccepted}
@@ -145,7 +161,7 @@ const Dashboard = () => {
           />
         )}
 
-        {goalProgress && !goalData?.goal && !goalSuggestions && (
+        {goalProgress && !goal?.goal && !goalSuggestions && (
           <LogProgress goalProgress={goalProgress} />
         )}
 
@@ -194,16 +210,12 @@ const Dashboard = () => {
 
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6 w-full'>
           <ActiveGoal
-            goal={goal || goalData}
+            goal={goal}
             onCustomize={handleCustomizeGoal}
             onComplete={handleCompleteGoal}
-            onCancel={handleCancel}
+            onDelete={handleDeleteGoal}
           />
-          <WeeklyInsights
-            stats={stats}
-            recent={recent}
-            goal={goal || goalData}
-          />
+          <WeeklyInsights stats={stats} recent={recent} goal={goal} />
         </div>
 
         <RecentActivities recent={recent} />

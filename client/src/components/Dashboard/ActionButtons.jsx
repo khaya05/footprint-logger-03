@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ActionButtons = ({ progress, onCustomize, onComplete, onCancel }) => (
+const ActionButtons = ({ progress, onCustomize, onComplete, onDelete }) => (
   <div className='flex gap-2 mt-4'>
     <button
       onClick={onCustomize}
@@ -24,10 +24,10 @@ const ActionButtons = ({ progress, onCustomize, onComplete, onCancel }) => (
       </button>
     )}
     <button
-      onClick={onCancel}
+      onClick={onDelete}
       className='px-4 py-2 bg-red-100 text-red-600 border border-red-200 rounded-md hover:bg-red-200 hover:cursor-pointer transition-colors text-sm font-medium'
     >
-      Cancel
+      Delete
     </button>
   </div>
 );

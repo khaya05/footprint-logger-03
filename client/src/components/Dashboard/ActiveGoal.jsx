@@ -8,8 +8,9 @@ import ProgressBar from './ProgresBar';
 import CustomizeForm from './CustomizeForm';
 import ActionButtons from './ActionButtons';
 import CompletionMessage from './CompletionMessage';
+import { toastService } from '../../util/toastUtil';
 
-const ActiveGoal = ({ goal, onCustomize, onComplete, onCancel }) => {
+const ActiveGoal = ({ goal, onCustomize, onComplete, onDelete }) => {
   const [showCustomizeForm, setShowCustomizeForm] = useState(false);
   const [customTarget, setCustomTarget] = useState('');
 
@@ -45,6 +46,12 @@ const ActiveGoal = ({ goal, onCustomize, onComplete, onCancel }) => {
     }
   };
 
+  const handleDelete = () => {
+    window.scroll(0, 0);
+    toastService.error('deleting goal');
+    onDelete(g._id);
+  };
+
   return (
     <Card>
       <CardContent>
@@ -63,12 +70,12 @@ const ActiveGoal = ({ goal, onCustomize, onComplete, onCancel }) => {
           />
         )}
 
-        {!isCompleted && !showCustomizeForm  && (
+        {!isCompleted && !showCustomizeForm && (
           <ActionButtons
             progress={progress}
             onCustomize={() => setShowCustomizeForm(true)}
             onComplete={() => onComplete(g._id)}
-            onCancel={() => onCancel(g._id)}
+            onDelete={handleDelete}
           />
         )}
 
@@ -77,4 +84,5 @@ const ActiveGoal = ({ goal, onCustomize, onComplete, onCancel }) => {
     </Card>
   );
 };
+
 export default ActiveGoal;

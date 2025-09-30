@@ -8,8 +8,6 @@ import SuggestionCard from './SuggestionCard.jsx';
 
 const GoalSuggestions = ({ suggestions, onGoalAccepted, onDismiss }) => {
   const [loading, setLoading] = useState(null);
-  console.log(suggestions);
-  
 
   const handleAcceptGoal = async (suggestion) => {
     setLoading(suggestion.id);
@@ -22,12 +20,15 @@ const GoalSuggestions = ({ suggestions, onGoalAccepted, onDismiss }) => {
       };
 
       const { data } = await customFetch.post('/goals', goalData);
-      const acceptedGoal = await customFetch.patch(
+      const acceptedResponse = await customFetch.patch(
         `/goals/${data.goal._id}/accept`
       );
-
+      
       toastService.success(`${suggestion.title} accepted!`);
-      if (onGoalAccepted) onGoalAccepted(acceptedGoal.data.goal);
+
+      if (onGoalAccepted) {
+        onGoalAccepted(acceptedResponse.data);
+      }
     } catch (error) {
       toastService.error(error?.response?.data?.msg || 'Failed to accept goal');
     } finally {
@@ -45,7 +46,8 @@ const GoalSuggestions = ({ suggestions, onGoalAccepted, onDismiss }) => {
         <SuggestionHeader onDismiss={handleDismiss} />
 
         <p className='text-gray-600 mb-6'>
-          Great job logging your activities! Here are personalized Tips based activities with highest emissions:
+          Great job logging your activities! Here are personalized Tips based on
+          activities with highest emissions:
         </p>
 
         <div className='grid gap-4 md:grid-cols-2'>
